@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Identificación de Imágenes</title>
+</head>
+<body>
+    <input type="file" id="imageInput" accept="image/*">
+    <img id="selectedImage" src="" alt="Imagen seleccionada" width="150" height="150">
+    <div id="predictionResult"></div>
+
+    <!-- TensorFlow.js library -->
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+    <!-- Load the model and perform inference -->
+    <script>
+        async function loadModel() {
+            // Cargar el modelo
+            const model = await tf.loadLayersModel('model.json');
+
+            // Obtener elementos HTML
+            const imageInput = document.getElementById('imageInput');
+            const selectedImage = document.getElementById('selectedImage');
+            const predictionResult = document.getElementById('predictionResult');
+
+            // Mapeo de clases a etiquetas descriptivas
+            const classLabels = {
+                0: 'Incendio',
+                1: 'Bosque'
+                // Puedes agregar más mapeos según tus clases
+            };
+
+            // Escuchar cambios en la entrada de imagen
+            imageInput.addEventListener('change', async () => {
+                const file = imageInput.files[0];
+                if (file) {
+                    const imageUrl = URL.createObjectURL(file);
+                    selectedImage.src = imageUrl;
+
+                    // Cargar y procesar la imagen
+                    const image = new Image();
+                    image.src = imageUrl;
+                    await image.decode();
+                    const tensor = tf.browser.fromPixels(image)
+                        .resizeNearestNeighbor([150, 150])
+                        .expandDims()
+                        .toFloat()
+                        .div(255);
+
+                    // Realizar la inferencia
+                    const predictions = await model.predict(tensor).array();
+                    const maxPredictionIndex = predictions[0].indexOf(Math.max(...predictions[0]));
+
+                    // Obtener la etiqueta descriptiva
+                    const predictionLabel = classLabels[maxPredictionIndex];
+
+                    // Mostrar el resultado
+                    predictionResult.innerHTML = `Clase predicha: ${predictionLabel}`;
+                }
+            });
+        }
+
+        // Llamar a la función para cargar el modelo cuando se cargue la página
+        window.addEventListener('load', loadModel);
+    </script>
+</body>
+</html>
